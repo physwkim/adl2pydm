@@ -21,7 +21,7 @@ QT_STYLESHEET_FILE = "stylesheet.qss"
 ENV_PYDM_DISPLAYS_PATH = "PYDM_DISPLAYS_PATH"
 SCREEN_FILE_EXTENSION = ".ui"
 DEFAULT_NUMBER_OF_POINTS = 1200
-TOP_LEVEL_WIDGET_CLASS = "PyDMAbsoluteGeometry"
+TOP_LEVEL_WIDGET_CLASS = "PyDMFrame"
 
 logger = logging.getLogger(__name__)
 
@@ -666,7 +666,7 @@ class Widget2Pydm(object):
         self.write_block_indicator(parent, block, nm, qw)
 
     def write_block_oval(self, parent, block, nm, qw):
-        ba = block.contents["basic attribute"]
+        ba = block.contents.get("basic attribute", {})
         da = block.contents.get("dynamic attribute", {})
         pv = self.get_channel(da)
         if pv is not None:

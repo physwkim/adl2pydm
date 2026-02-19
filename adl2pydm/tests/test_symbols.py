@@ -7,7 +7,7 @@ from .. import symbols
     "widget_set, length",
     [
         [symbols.adl_widgets, 24],
-        [symbols.pydm_widgets, 35],
+        [symbols.pydm_widgets, 34],
     ],
 )
 def test_symbols_dict(widget_set, length):
