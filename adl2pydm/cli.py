@@ -68,6 +68,13 @@ def get_user_parameters():
         ),
     )
 
+    parser.add_argument(
+        "--no-scaling",
+        action="store_true",
+        default=False,
+        help="Disable proportional scaling (use plain PyDMFrame)",
+    )
+
     return parser.parse_args()
 
 
@@ -96,6 +103,9 @@ def configure_logging(options):
 def main():
     options = get_user_parameters()
     configure_logging(options)
+
+    if options.no_scaling:
+        output_handler.TOP_LEVEL_WIDGET_CLASS = "PyDMFrame"
 
     if options.use_scatterplot:
         from .symbols import adl_widgets

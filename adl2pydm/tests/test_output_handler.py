@@ -26,16 +26,9 @@ def test_write_top_level_widget(test_file, tempdir):
     full_uiname = pathlib.Path(tempdir) / uiname
     root = ElementTree.parse(full_uiname).getroot()
 
-    widgets = _core.getSubElement(root, "widget")
-    assert len(widgets) > 0
-    # fmt: off
-    widget_classes = [
-        w.attrib.get("class")
-        for w in widgets
-        if w.attrib.get("class") is not None
-    ]
-    # fmt: on
-    assert output_handler.TOP_LEVEL_WIDGET_CLASS in widget_classes
+    top_widget = _core.getSubElement(root, "widget")
+    assert len(top_widget) > 0
+    assert top_widget.attrib.get("class") == output_handler.TOP_LEVEL_WIDGET_CLASS
 
     customwidgets = _core.getSubElement(root, "customwidgets")
     widgets = customwidgets.findall("customwidget")
@@ -276,8 +269,7 @@ def test_write_widget_composite(tempdir):
 
     key = "composite"
     widget = _core.getNamedWidget(screen, key)
-    # _core.assertEqualClassName(widget, "PyDMFrame", key)
-    _core.assertEqualClassName(widget, output_handler.TOP_LEVEL_WIDGET_CLASS, key)
+    _core.assertEqualClassName(widget, "PyDMFrame", key)
     _core.assertEqual(len(widget), 6)
 
 
