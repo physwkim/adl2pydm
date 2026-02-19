@@ -45,8 +45,8 @@ def compute_grid_placement(widgets_with_geometry, container_width, container_hei
             GridPlacement(
                 row,
                 col,
-                y_index[geom.y + geom.height] - row,
-                x_index[geom.x + geom.width] - col,
+                max(1, y_index[geom.y + geom.height] - row),
+                max(1, x_index[geom.x + geom.width] - col),
             ),
         ))
 

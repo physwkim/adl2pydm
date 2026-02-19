@@ -85,3 +85,17 @@ def test_spanning_widget():
     result = compute_grid_placement(widgets, 100, 100)
     refs = {ref: gp for ref, gp in result["placements"]}
     assert refs["bottom"] == GridPlacement(row=1, col=0, rowspan=1, colspan=2)
+
+
+def test_zero_size_widget():
+    """Zero-width/height widgets (MEDM lines) get span clamped to 1."""
+    widgets = [
+        ("hline", Geometry(10, 50, 80, 0)),  # horizontal line, height=0
+        ("vline", Geometry(50, 10, 0, 80)),  # vertical line, width=0
+    ]
+    result = compute_grid_placement(widgets, 100, 100)
+    refs = {ref: gp for ref, gp in result["placements"]}
+    assert refs["hline"].rowspan >= 1
+    assert refs["hline"].colspan >= 1
+    assert refs["vline"].rowspan >= 1
+    assert refs["vline"].colspan >= 1
