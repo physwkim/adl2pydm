@@ -1,14 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adl2pydm"
+description = "Convert MEDM's .adl files to PyDM's .ui format."
+readme = "README.md"
+authors = [{name = "Pete Jemian", email = "jemian@anl.gov"}]
+license = {text = "(c) 2017-2022, UChicago Argonne, LLC"}
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: Freely Distributable",
+    "License :: Public Domain",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development",
+]
+dependencies = [
+    "PySide6>=6.5.0",
+    "qtpy>=2.2.0",
+]
+dynamic = ["version"]
+
+[project.scripts]
+adl2pydm = "adl2pydm.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/physwkim/adl2pydm"
+
+[tool.setuptools_scm]
+write_to = "adl2pydm/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["adl2pydm*"]
+exclude = ["adl2pydm/tests*"]
+
 [tool.black]
 line-length = 115
 target-version = ['py312']
 include = '\.pyi?$'
 exclude = '''
-
 (
   /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
+      \.eggs
+    | \.git
     | \.mypy_cache
     | \.tox
     | \.venv
@@ -18,7 +60,6 @@ exclude = '''
     | dist
     | docs
   )/
-  | versioneer.py
   | _version.py
 )
 '''

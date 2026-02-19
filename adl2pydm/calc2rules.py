@@ -49,13 +49,9 @@ def convertCalcToRuleExpression(medm_calc):
                     #     from math import *
                     #     import numpy as np
                     calc += tok.string.lower()  # simply
-            elif tok.type == tokenize.ERRORTOKEN:
-                op = tok.string
-                if op == "!":
-                    op = " not "
-                calc += op
-            elif tok.type == tokenize.OP:
+            elif tok.type in (tokenize.OP, tokenize.ERRORTOKEN):
                 calc += {
+                    "!": " not ",
                     "=": "==",
                     "|": " or ",
                     "&": " and ",
