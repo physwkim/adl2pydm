@@ -492,11 +492,14 @@ class Widget2Pydm(object):
         self.write_font_size(qw, block)
 
         # MEDM stacking: row | column | row column
+        # PySide6 PyDMEnumButton declares orientation as Property(int, ...)
+        # so we must write the Qt enum integer value, not a string.
+        # Qt.Horizontal=1, Qt.Vertical=2
         stacking_choices = {
             # seems backwards
             # but MEDM shows a row with stacking = column
-            "row": "Qt::Vertical",
-            "column": "Qt::Horizontal",
+            "row": "2",      # Qt.Vertical
+            "column": "1",   # Qt.Horizontal
         }
         stacking = block.contents.get("stacking", "row")
         if stacking not in stacking_choices:
@@ -509,7 +512,7 @@ class Widget2Pydm(object):
             )
             stacking = "row"
         orientation = stacking_choices[stacking]
-        self.writer.writeProperty(qw, "orientation", orientation, stdset="0")
+        self.writer.writeProperty(qw, "orientation", orientation, tag="number", stdset="0")
         for k in """
                 horizontalSpacing   verticalSpacing
                 margin_top          margin_bottom
