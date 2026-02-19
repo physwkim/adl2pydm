@@ -20,6 +20,7 @@ logger = None
 
 def processFile(adl_filename, output_path=None, use_layout=True):
     output_path = output_path or str(pathlib.Path(adl_filename).parent)
+    pathlib.Path(output_path).mkdir(parents=True, exist_ok=True)
 
     screen = adl_parser.MedmMainWidget(adl_filename)
     buf = screen.getAdlLines(adl_filename)
