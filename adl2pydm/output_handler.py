@@ -248,10 +248,10 @@ class Widget2Pydm(object):
             self.write_block(item, widget_block)
 
     def _write_size_policy(self, widget):
-        """Write Expanding sizePolicy so widgets fill their layout cells."""
+        """Write Ignored sizePolicy so layout stretch factors fully control sizing."""
         propty = self.writer.writeOpenProperty(widget, "sizePolicy")
         sp = self.writer.writeOpenTag(
-            propty, "sizepolicy", hsizetype="Expanding", vsizetype="Expanding"
+            propty, "sizepolicy", hsizetype="Ignored", vsizetype="Ignored"
         )
         self.writer.writeTaggedString(sp, "horstretch", "0")
         self.writer.writeTaggedString(sp, "verstretch", "0")
