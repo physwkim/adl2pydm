@@ -45,8 +45,17 @@ def getNamedProperty(parent, propName):
             return prop
 
 
+def findChildWidgets(parent):
+    """Find child widgets, supporting both direct and layout-based positioning."""
+    widgets = list(parent.findall("widget"))
+    for layout in parent.findall("layout"):
+        for item in layout.findall("item"):
+            widgets.extend(item.findall("widget"))
+    return widgets
+
+
 def getNamedWidget(parent, key):
-    for widget in parent.findall("widget"):
+    for widget in findChildWidgets(parent):
         if widget.attrib["name"] == key:
             return widget
 
@@ -59,7 +68,7 @@ def getSubElement(parent, tag):
 
 
 def getWidgetsClass(parent, cls):
-    widgets = parent.findall("widget")
+    widgets = findChildWidgets(parent)
     # fmt: off
     findings = [
         w.attrib["class"]

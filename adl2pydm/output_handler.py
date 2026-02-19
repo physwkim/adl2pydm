@@ -21,7 +21,7 @@ QT_STYLESHEET_FILE = "stylesheet.qss"
 ENV_PYDM_DISPLAYS_PATH = "PYDM_DISPLAYS_PATH"
 SCREEN_FILE_EXTENSION = ".ui"
 DEFAULT_NUMBER_OF_POINTS = 1200
-TOP_LEVEL_WIDGET_CLASS = "ScalableFrame"
+TOP_LEVEL_WIDGET_CLASS = "PyDMFrame"
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,8 @@ class Widget2Pydm(object):
 
     """
 
-    def __init__(self):
+    def __init__(self, use_layout=True):
+        self.use_layout = use_layout
         self.custom_widgets = []
         self.unique_widget_names = {}
         self.pydm_widget_handlers = {
@@ -211,6 +212,50 @@ class Widget2Pydm(object):
 
             block.color = None
 
+    def _write_children_in_layout(self, parent_widget, widgets, container_w, container_h):
+        """Create a QGridLayout inside parent_widget and place widgets in grid cells."""
+        from .grid_layout import compute_grid_placement
+
+        grid = compute_grid_placement(
+            [(w, w.geometry) for w in widgets], container_w, container_h
+        )
+
+        layout_name = self.get_unique_widget_name("gridLayout")
+        layout = self.writer.writeOpenTag(
+            parent_widget, "layout", cls="QGridLayout", name=layout_name
+        )
+
+        for margin in (
+            "leftMargin", "topMargin", "rightMargin", "bottomMargin",
+            "horizontalSpacing", "verticalSpacing",
+        ):
+            self.writer.writeProperty(layout, margin, "0", tag="number")
+
+        layout.attrib["columnstretch"] = ",".join(
+            str(s) for s in grid["col_stretches"]
+        )
+        layout.attrib["rowstretch"] = ",".join(
+            str(s) for s in grid["row_stretches"]
+        )
+
+        for widget_block, placement in grid["placements"]:
+            attrs = {"row": str(placement.row), "column": str(placement.col)}
+            if placement.rowspan > 1:
+                attrs["rowspan"] = str(placement.rowspan)
+            if placement.colspan > 1:
+                attrs["colspan"] = str(placement.colspan)
+            item = ElementTree.SubElement(layout, "item", attrib=attrs)
+            self.write_block(item, widget_block)
+
+    def _write_size_policy(self, widget):
+        """Write Expanding sizePolicy so widgets fill their layout cells."""
+        propty = self.writer.writeOpenProperty(widget, "sizePolicy")
+        sp = self.writer.writeOpenTag(
+            propty, "sizepolicy", hsizetype="Expanding", vsizetype="Expanding"
+        )
+        self.writer.writeTaggedString(sp, "horstretch", "0")
+        self.writer.writeTaggedString(sp, "verstretch", "0")
+
     def write_block(self, parent, block):
         nm = self.get_unique_widget_name(block.symbol.replace(" ", "_"))
 
@@ -241,6 +286,8 @@ class Widget2Pydm(object):
         # TODO: PyDMDrawingMMM (Line, Polygon, Oval, ...) need more decisions here
         qw = self.writer.writeOpenTag(parent, "widget", cls=cls, name=nm)
         self.write_geometry(qw, block.geometry)
+        if self.use_layout:
+            self._write_size_policy(qw)
         # self.write_stylesheet(qw, block)
         handler(parent, block, nm, qw)
 
@@ -314,15 +361,20 @@ class Widget2Pydm(object):
         propty = self.writer.writeOpenProperty(form, "windowTitle")
         self.writer.writeTaggedString(propty, value=title)
 
-        for i, widget in enumerate(screen.widgets):
-            # handle "widget" if it is a known screen component
-            logger.debug(
-                f"WIDGET {screen.given_filename}"
-                f" {widget.line_offset}"
-                f" {i+1}/{len(screen.widgets)}"
-                f" {widget.symbol}"
+        if self.use_layout and len(screen.widgets) > 0:
+            self._write_children_in_layout(
+                form, screen.widgets, screen.geometry.width, screen.geometry.height
             )
-            self.write_block(form, widget)
+        else:
+            for i, widget in enumerate(screen.widgets):
+                # handle "widget" if it is a known screen component
+                logger.debug(
+                    f"WIDGET {screen.given_filename}"
+                    f" {widget.line_offset}"
+                    f" {i+1}/{len(screen.widgets)}"
+                    f" {widget.symbol}"
+                )
+                self.write_block(form, widget)
 
         for zinfo in sorted(self.writer.widget_stacking_info, key=lambda w: w.order):
             z = ElementTree.SubElement(form, "zorder")
@@ -593,7 +645,14 @@ class Widget2Pydm(object):
                 widget.geometry.width,
                 widget.geometry.height,
             )
-            self.write_block(qw, widget)
+
+        if self.use_layout and len(block.widgets) > 0:
+            self._write_children_in_layout(
+                qw, block.widgets, block.geometry.width, block.geometry.height
+            )
+        else:
+            for widget in block.widgets:
+                self.write_block(qw, widget)
 
     def write_block_embedded_display(self, parent, block, nm, qw):
         self.write_tooltip(qw, nm)

@@ -132,5 +132,4 @@ pydm_widgets = dict(
     PyDMScaleIndicator=PyDM_CustomWidget("PyDMScaleIndicator", "QFrame", "pydm.widgets.scale"),
     PyDMSymbol=PyDM_CustomWidget("PyDMSymbol", "QWidget", "pydm.widgets.symbol"),
     PyDMWaveformTable=PyDM_CustomWidget("PyDMWaveformTable", "QTableWidget", "pydm.widgets.waveformtable"),
-    ScalableFrame=PyDM_CustomWidget("ScalableFrame", "PyDMFrame", "adl2pydm.widgets"),
 )

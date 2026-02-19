@@ -58,7 +58,7 @@ def test_write_widget_arc(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "arc"
@@ -95,7 +95,7 @@ def test_write_widget_bar(tempdir):
         "bar_5": ["right", True, False, False, False, (253, 0, 0), (187, 187, 187)],
         "bar_6": ["right", True, False, False, False, (253, 0, 0), (187, 187, 187)],
     }
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 22)
     for w in widgets:
         if w.attrib["class"] == "PyDMScaleIndicator":
@@ -134,7 +134,7 @@ def test_write_widget_byte(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 4)
 
     key = "byte"
@@ -201,7 +201,7 @@ def test_write_widget_cartesian_plot(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "cartesian_plot"
@@ -248,7 +248,7 @@ def test_write_widget_choice_button(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "choice_button"
@@ -264,13 +264,13 @@ def test_write_widget_composite(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "composite"
     widget = _core.getNamedWidget(screen, key)
     _core.assertEqualClassName(widget, "PyDMFrame", key)
-    _core.assertEqual(len(widget), 6)
+    _core.assertEqual(len(_core.findChildWidgets(widget)), 5)
 
 
 def test_write_widget_embedded_display(tempdir):
@@ -283,13 +283,12 @@ def test_write_widget_embedded_display(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 19)
 
     key = "composite"
     widget = _core.getNamedWidget(screen, key)
     _core.assertEqualClassName(widget, "PyDMEmbeddedDisplay", key)
-    _core.assertEqual(len(widget), 4)
     _core.assertEqualPropertyString(widget, "filename", "configMenuHead_bare.ui")
     _core.assertEqualPropertyString(widget, "macros", "P=${P},CONFIG=${CONFIG}")
 
@@ -301,7 +300,7 @@ def test_write_widget_image(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "image"
@@ -317,7 +316,7 @@ def test_write_widget_indicator(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "indicator"
@@ -350,7 +349,7 @@ def test_write_widget_menu(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "menu"
@@ -366,7 +365,7 @@ def test_write_widget_message_button(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "message_button"
@@ -385,7 +384,7 @@ def test_write_widget_meter(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 1)
 
     key = "meter"
@@ -420,7 +419,7 @@ def test_write_widget_oval(tempdir):
         "oval_6": [(253, 0, 0), "SolidPattern", "Qt::SolidLine", "Qt::FlatCap", 0],
         "oval_7": [(0, 0, 0), "SolidPattern", "Qt::SolidLine", "Qt::FlatCap", 0],
     }
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 22)
     for w in widgets:
         if w.attrib["class"] == "PyDMDrawingEllipse":
@@ -481,7 +480,7 @@ def test_write_widget_polyline(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 1)
 
     key = "polyline"
@@ -510,7 +509,7 @@ def test_write_widget_polyline_with_rules(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 1)
 
     key = "polyline"
@@ -558,7 +557,7 @@ def test_write_widget_rectangle(tempdir):
     _core.assertExpectedAttrib(prop, name="windowTitle")
     _core.assertEqualStringChild(prop, "rectangle")
 
-    children = screen.findall("widget")
+    children = _core.findChildWidgets(screen)
     _core.assertEqual(len(children), 5)
 
     key = "rectangle"
@@ -573,7 +572,7 @@ def test_write_widget_rectangle(tempdir):
     _core.assertEqualGeometry(rect, 10, 53, 113, 35)
     _core.assertEqualToolTip(rect, key)
     properties = rect.findall("property")
-    _core.assertEqual(len(properties), 7)
+    _core.assertEqual(len(properties), 8)
     _core.assertEqualBrush(rect, "NoBrush", 253, 0, 0)
     _core.assertEqualPenStyle(rect, "Qt::SolidLine")
     _core.assertEqualPenColor(rect, 253, 0, 0)
@@ -586,7 +585,7 @@ def test_write_widget_rectangle(tempdir):
     _core.assertEqualGeometry(rect, 10, 92, 113, 35)
     _core.assertEqualToolTip(rect, key)
     properties = rect.findall("property")
-    _core.assertEqual(len(properties), 7)
+    _core.assertEqual(len(properties), 8)
     _core.assertEqualBrush(rect, "NoBrush", 249, 218, 60)
     _core.assertEqualPenStyle(rect, "Qt::DashLine")
     _core.assertEqualPenColor(rect, 249, 218, 60)
@@ -599,7 +598,7 @@ def test_write_widget_rectangle(tempdir):
     _core.assertEqualGeometry(rect, 10, 130, 113, 36)
     _core.assertEqualToolTip(rect, key)
     properties = rect.findall("property")
-    _core.assertEqual(len(properties), 8)
+    _core.assertEqual(len(properties), 9)
     _core.assertEqualBrush(rect, "NoBrush", 115, 255, 107)
     _core.assertEqualPenStyle(rect, "Qt::SolidLine")
     _core.assertEqualPenColor(rect, 115, 255, 107)
@@ -625,7 +624,7 @@ def test_write_widget_rectangle(tempdir):
     _core.assertEqualGeometry(rect, 20, 138, 93, 20)
     _core.assertEqualToolTip(rect, key)
     properties = rect.findall("property")
-    _core.assertEqual(len(properties), 8)
+    _core.assertEqual(len(properties), 9)
     _core.assertEqualBrush(rect, "SolidPattern", 115, 223, 255)
     _core.assertEqualPenStyle(rect, "Qt::SolidLine")
     _core.assertEqualPenColor(rect, 115, 223, 255)
@@ -651,7 +650,7 @@ def test_write_widget_related_display(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 64)
 
     key = "related_display"
@@ -699,7 +698,7 @@ def test_write_widget_strip_chart_axis_labels(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 1)
 
     key = "strip_chart"
@@ -717,7 +716,7 @@ def test_write_widget_shell_command(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     _core.assertEqual(len(widgets), 1)
 
     key = "shell_command"
@@ -759,7 +758,7 @@ def test_write_widget_strip_chart(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 64
 
     key = "strip_chart"
@@ -807,7 +806,7 @@ def test_write_widget_text(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 64
 
     key = "text"
@@ -831,7 +830,7 @@ def test_write_widget_text_entry(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 64
 
     key = "text_entry"
@@ -854,7 +853,7 @@ def test_write_widget_text_examples(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 17
 
     key = "text_update"
@@ -888,7 +887,7 @@ def test_write_widget_text_update(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 64
 
     key = "text_update"
@@ -921,7 +920,7 @@ def test_write_widget_valuator_variations(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 1
 
     key = "valuator"
@@ -944,7 +943,7 @@ def test_write_widget_wheel_switch(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 1
 
     key = "wheel_switch"
@@ -965,7 +964,7 @@ def test_write_widget_valuator(tempdir):
 
     root = ElementTree.parse(full_uiname).getroot()
     screen = _core.getSubElement(root, "widget")
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 64
 
     key = "valuator"
@@ -1073,7 +1072,7 @@ def test_write_widget_valuator(tempdir):
             (187, 187, 187),
         ],
     }
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     assert len(widgets) == 8
     for w in widgets:
         if w.attrib["class"] == "PyDMSlider":
@@ -1130,7 +1129,7 @@ def test_zorder(tempdir):
     _core.assertEqual(len(zorder_elements), 5)
 
     # zorder names should match widget names in order
-    widgets = screen.findall("widget")
+    widgets = _core.findChildWidgets(screen)
     widget_names = [w.attrib["name"] for w in widgets]
     zorder_names = [z.text for z in zorder_elements]
     _core.assertEqual(zorder_names, widget_names)

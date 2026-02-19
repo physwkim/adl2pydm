@@ -18,14 +18,14 @@ from . import output_handler
 logger = None
 
 
-def processFile(adl_filename, output_path=None):
+def processFile(adl_filename, output_path=None, use_layout=True):
     output_path = output_path or str(pathlib.Path(adl_filename).parent)
 
     screen = adl_parser.MedmMainWidget(adl_filename)
     buf = screen.getAdlLines(adl_filename)
     screen.parseAdlBuffer(buf)
 
-    writer = output_handler.Widget2Pydm()
+    writer = output_handler.Widget2Pydm(use_layout=use_layout)
     writer.write_ui(screen, output_path)
 
 
@@ -104,16 +104,14 @@ def main():
     options = get_user_parameters()
     configure_logging(options)
 
-    if options.no_scaling:
-        output_handler.TOP_LEVEL_WIDGET_CLASS = "PyDMFrame"
-
     if options.use_scatterplot:
         from .symbols import adl_widgets
 
         adl_widgets["cartesian plot"]["pydm_widget"] = "PyDMScatterPlot"
 
+    use_layout = not options.no_scaling
     for adlfile in options.adlfiles:
         try:
-            processFile(adlfile, options.dir)
+            processFile(adlfile, options.dir, use_layout=use_layout)
         except Exception as exc:
-            logger.error(f"error processing {adlfile}:" f" {exc}")
+            logger.error(f"error processing {adlfile}: {exc}")
