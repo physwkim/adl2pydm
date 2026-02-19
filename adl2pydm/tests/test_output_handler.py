@@ -543,7 +543,7 @@ def test_write_widget_rectangle(tempdir):
     screen = _core.getSubElement(root, "widget")
     _core.assertEqualClassName(screen, output_handler.TOP_LEVEL_WIDGET_CLASS, "screen")
     properties = screen.findall("property")
-    _core.assertEqual(len(properties), 3)
+    _core.assertEqual(len(properties), 4)
     _core.assertEqualGeometry(screen, 96, 57, 142, 182)
     expected = (
         f"{output_handler.TOP_LEVEL_WIDGET_CLASS}#screen"

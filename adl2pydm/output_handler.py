@@ -356,6 +356,11 @@ class Widget2Pydm(object):
         form = self.writer.writeOpenTag(root, "widget", cls=TOP_LEVEL_WIDGET_CLASS, name="screen")
 
         self.write_geometry(form, screen.geometry)
+        if self.use_layout:
+            propty = self.writer.writeOpenProperty(form, "minimumSize")
+            sz = self.writer.writeOpenTag(propty, "size")
+            self.writer.writeTaggedString(sz, "width", str(screen.geometry.width))
+            self.writer.writeTaggedString(sz, "height", str(screen.geometry.height))
         self.write_stylesheet(form, screen)
 
         propty = self.writer.writeOpenProperty(form, "windowTitle")
