@@ -65,7 +65,12 @@ def convertDynamicAttribute_to_Rules(attr):
     """
     rule = dict(name="visibility", property="Visible")
     channels = {}
-    for nm, ref in dict(chan="A", chanB="B", chanC="C", chanD="D").items():
+    channel_keys = {
+        "chan": "A", "chanB": "B", "chanC": "C", "chanD": "D",
+        "chanE": "E", "chanF": "F", "chanG": "G", "chanH": "H",
+        "chanI": "I", "chanJ": "J", "chanK": "K", "chanL": "L",
+    }
+    for nm, ref in channel_keys.items():
         if nm in attr:
             pv = convertMacros(attr[nm])
             channels[ref] = dict(channel=f"ca://{pv}", trigger=len(pv) > 0)
@@ -238,6 +243,10 @@ class Widget2Pydm(object):
         self.write_geometry(qw, block.geometry)
         # self.write_stylesheet(qw, block)
         handler(parent, block, nm, qw)
+
+        order = len(self.writer.widget_stacking_info)
+        self.writer.widget_stacking_info.append(Qt_zOrder(order=order, vis=1, text=nm))
+
         msg = "(#%d) %s -> %s: %s" % (block.line_offset, block.symbol, cls, nm)
         logger.debug(msg)
 
@@ -272,14 +281,15 @@ class Widget2Pydm(object):
 
     def write_font_size(self, qw, block, **kwargs):
         """
-        constrain font size within geometry (height)
-        """
-        smallest = 4
-        largest = 10
-        margin = 3
-        pointsize = int(max(smallest, min(largest, block.geometry.height - 2 * margin)))
+        Estimate font size from widget geometry height.
 
-        propty = self.writer.writeOpenProperty(qw, "font", stdset="0")
+        Uses ~60% of widget height as a heuristic, clamped to [6, 20] pt.
+        """
+        smallest = 6
+        largest = 20
+        pointsize = int(max(smallest, min(largest, block.geometry.height * 0.6)))
+
+        propty = self.writer.writeOpenProperty(qw, "font")
         font = self.writer.writeOpenTag(propty, "font")
         self.writer.writeTaggedString(font, "pointsize", str(pointsize))
 
@@ -314,7 +324,9 @@ class Widget2Pydm(object):
             )
             self.write_block(form, widget)
 
-        # TODO: self.write widget <zorder/> elements here (#7)
+        for zinfo in sorted(self.writer.widget_stacking_info, key=lambda w: w.order):
+            z = ElementTree.SubElement(form, "zorder")
+            z.text = zinfo.text
 
         self.write_customwidgets(root)
 
@@ -378,7 +390,9 @@ class Widget2Pydm(object):
         self.writePropertyBoolean(qw, "showValue", showValue, stdset="0")
         self.writePropertyBoolean(qw, "showTicks", showTicks, stdset="0")
         self.writePropertyBoolean(qw, "showLimits", showLimits, stdset="0")
-        # TODO: originAtZero
+
+        if block.contents.get("origin", "edge") == "center":
+            self.writePropertyBoolean(qw, "originAtZero", True, stdset="0")
 
         color = self.writer.writeOpenProperty(qw, "indicatorColor", stdset="0")
         self.write_color_element(color, block.color)
@@ -540,14 +554,14 @@ class Widget2Pydm(object):
             )
         self.writePropertyStringlist(qw, "curves", curves, stdset="0")
 
-        # TODO: add this code back?
-        # scales = dict(autoRangeX=True, autoRangeY=True)
-        # for axis in "x_axis y1_axis y2_axis".split():
-        #     rangeStyle = block.contents.get(axis, {}).get("rangeStyle")
-        #     option = rangeStyle == "auto-scale"
-        #     scales["autoRange"+axis[0].upper()] = option
-        # for k, v in scales.items():
-        #     self.writePropertyBoolean(qw, k, v, stdset="0")
+        scales = dict(autoRangeX=True, autoRangeY=True)
+        for axis in "x_axis y1_axis y2_axis".split():
+            rangeStyle = block.contents.get(axis, {}).get("rangeStyle")
+            if rangeStyle is not None:
+                option = rangeStyle == "auto-scale"
+                scales["autoRange" + axis[0].upper()] = option
+        for k, v in scales.items():
+            self.writePropertyBoolean(qw, k, v, stdset="0")
 
         color = self.writer.writeOpenProperty(qw, "axisColor", stdset="0")
         self.write_color_element(color, block.color)
@@ -559,9 +573,17 @@ class Widget2Pydm(object):
     def write_block_composite(self, parent, block, nm, qw):
         # self.write_tooltip(qw, nm)
         self.write_dynamic_attribute(qw, block)
+
+        parent_da = block.contents.get("dynamic attribute", {})
         x0 = block.geometry.x
         y0 = block.geometry.y
         for widget in block.widgets:
+            # propagate parent's dynamic attribute to children
+            if parent_da and "chan" in parent_da:
+                child_da = widget.contents.get("dynamic attribute", {})
+                if "chan" not in child_da:
+                    widget.contents["dynamic attribute"] = {**parent_da, **child_da}
+
             # in MEDM, composites use absolute positioning
             # in PyDM, composites use relative positioning
             # subtract x,y of the composite from each widget
@@ -681,20 +703,37 @@ class Widget2Pydm(object):
             self.writer.writeProperty(qw, "penWidth", penWidth, tag="double", stdset="0")
 
     def write_block_polygon(self, parent, block, nm, qw):
-        self.write_tooltip(qw, "PyDMDrawingIrregularPolygon\nwidget not yet ready")
-        # TODO:
-        # these lines from polyline support
         self.write_tooltip(qw, nm)
-        self.write_basic_attribute(qw, block)
         self.write_dynamic_attribute(qw, block)
-        # FIXME: needs to support fill = "solid"
-        # https://github.com/BCDA-APS/adl2pydm/issues/51
+
         ba = block.contents.get("basic attribute", {})
+        fill = ba.get("fill", "outline")
+
+        # write brush for fill style
+        brush_prop = self.writer.writeOpenProperty(qw, "brush", stdset="0")
+        brushstyle = "SolidPattern" if fill == "solid" else "NoBrush"
+        brush = self.writer.writeOpenTag(brush_prop, "brush", brushstyle=brushstyle)
+        self.write_color_element(brush, block.color, alpha="255")
+
+        # write pen properties
+        pen_style = ba.get("style", "solid")
+        pen_styles = {"solid": "Qt::SolidLine", "dash": "Qt::DashLine"}
+        self.writer.writeProperty(
+            qw, "penStyle", pen_styles.get(pen_style, "Qt::SolidLine"), tag="enum", stdset="0"
+        )
+        pen_color_prop = self.writer.writeOpenProperty(qw, "penColor", stdset="0")
+        self.write_color_element(pen_color_prop, block.color)
+
         try:
             penWidth = int(ba.get("width", 1))
         except Exception as exc:
             logger.critical(f"penWidth: {exc}")
             penWidth = 1
+
+        if penWidth > 0:
+            self.writer.writeProperty(qw, "penWidth", penWidth, tag="double", stdset="0")
+
+        block.color = None
 
         pt_list = []
         for pt in block.points:
@@ -917,23 +956,21 @@ class Widget2Pydm(object):
         self.write_tooltip(qw, pv)
         self.write_limits(qw, block)
 
-        format = block.contents.get("format")
-        if format is not None:
-            logger.warning(
-                ("(%s,L%s,%s) " "wheel switch format is unsupported now: %s"),
-                block.symbol,
-                block.line_offset,
-                block.main.given_filename,
-                format,
-            )
-            # TODO: format -
-            # maybe not be supported in Qt QDoubleSpinBox
-            # https://doc.qt.io/qt-5/qdoublespinbox.html#details
-            # If the Format is not specified,
-            #   then the WheelSwitch calculates it
-            #   based on the low and high limits and
-            #   the precision.
-            # https://epics.anl.gov/EpicsDocumentation/ExtensionsManuals/MEDM/MEDM.html#Label
+        fmt = block.contents.get("format")
+        if fmt is not None:
+            # Map MEDM format string to QDoubleSpinBox decimals property
+            # e.g. "6.3" → decimals=3, "integer" → decimals=0
+            if fmt == "integer":
+                self.writer.writeProperty(qw, "decimals", "0", tag="number", stdset="0")
+            elif "." in fmt:
+                try:
+                    decimals = int(fmt.split(".")[1])
+                    self.writer.writeProperty(qw, "decimals", str(decimals), tag="number", stdset="0")
+                except (ValueError, IndexError):
+                    logger.warning(
+                        "(%s,L%s,%s) wheel switch format not parseable: %s",
+                        block.symbol, block.line_offset, block.main.given_filename, fmt,
+                    )
 
     # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -1057,6 +1094,8 @@ class Widget2Pydm(object):
             show = dict(limits=True, values=True)
         elif label == "channel":
             show = dict(limits=True, values=True)
+        else:
+            show = dict(limits=False, values=False)
         self.writePropertyBoolean(qw, "showLimitLabels", show["limits"], stdset="0")
         self.writePropertyBoolean(qw, "showValueLabel", show["values"], stdset="0")
 
@@ -1188,16 +1227,6 @@ class PYDM_Writer(object):
 
     def generate_ui_contents(self):
         """Generate .UI XML contents for writing to file."""
-
-        def sorter(widget):
-            return widget.order
-
-        # sort widgets by the order we had when parsing
-        for widget in sorted(self.widget_stacking_info, key=sorter):
-            z = ElementTree.SubElement(self.root, "zorder")
-            # TODO: what about "vis" field?
-            z.text = str(widget.text)
-
         # ElementTree needs help to pretty print
         # (easier in lxml but that's an additional package to add)
         text = ElementTree.tostring(self.root)
@@ -1211,6 +1240,12 @@ class PYDM_Writer(object):
 
     def writeProperty(self, parent, name, value, tag="string", **kwargs):
         prop = self.writeOpenTag(parent, "property", name=name)
+        if tag == "number":
+            # handle scientific notation (e.g. '-2e+08') that PyQt uic cannot parse
+            try:
+                value = str(int(float(value)))
+            except (ValueError, TypeError):
+                pass
         self.writeTaggedString(prop, tag, value)
         for k, v in kwargs.items():
             prop.attrib[k] = v

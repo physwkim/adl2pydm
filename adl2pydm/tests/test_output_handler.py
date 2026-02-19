@@ -1124,35 +1124,24 @@ def test_write_widget_valuator(tempdir):
 
 
 def test_zorder(tempdir):
-    fname = pathlib.Path(tempdir) / "test.xml"
-    writer = output_handler.PYDM_Writer(None)
-    writer.openFile(fname)
-    specs = [
-        # order     vis text
-        ("widget_0", 2, "first"),
-        ("widget_4", 0, "last"),
-        ("widget_1", -3, 3),
-        ("widget_2", 2, 4),
-    ]
-    for args in specs:
-        writer.widget_stacking_info.append(output_handler.Qt_zOrder(*args))
-    writer.closeFile()
-    _core.assertTrue(fname.exists())
+    """Test that zorder elements are written inside the screen widget."""
+    uiname = _core.convertAdlFile("rectangle.adl", tempdir)
+    full_uiname = pathlib.Path(tempdir) / uiname
+    _core.assertTrue(full_uiname.exists())
 
-    with open(fname, "r") as fp:
-        buf = fp.readlines()
-    expected = (
-        '<?xml version="1.0" ?>',
-        '<ui version="4.0">',
-        "  <zorder>first</zorder>",
-        "  <zorder>3</zorder>",
-        "  <zorder>4</zorder>",
-        "  <zorder>last</zorder>",
-        "</ui>",
-    )
-    _core.assertEqual(len(buf), len(expected))
-    for idx in range(len(buf)):
-        _core.assertEqual(buf[idx].rstrip(), expected[idx])
+    tree = ElementTree.parse(full_uiname)
+    root = tree.getroot()
+    screen = _core.getSubElement(root, "widget")
+
+    zorder_elements = screen.findall("zorder")
+    # rectangle.adl has 5 widget children
+    _core.assertEqual(len(zorder_elements), 5)
+
+    # zorder names should match widget names in order
+    widgets = screen.findall("widget")
+    widget_names = [w.attrib["name"] for w in widgets]
+    zorder_names = [z.text for z in zorder_elements]
+    _core.assertEqual(zorder_names, widget_names)
 
 
 def test_xml_subelements(tempdir):
