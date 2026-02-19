@@ -20,7 +20,7 @@ __python_version_required__ = ">=3.12"
 __package_name__ = __project__
 __long_description__ = __description__
 
-__install_requires__ = ["PySide2"]
+__install_requires__ = ["PySide6>=6.5.0", "qtpy>=2.2.0"]
 
 __classifiers__ = [
     "Development Status :: 5 - Production/Stable",
