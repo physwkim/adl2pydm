@@ -224,9 +224,66 @@ class Widget2Pydm(object):
         """Create a QGridLayout inside parent_widget and place widgets in grid cells."""
         from .grid_layout import compute_grid_placement
 
-        grid = compute_grid_placement(
-            [(w, w.geometry) for w in widgets], container_w, container_h
-        )
+        # Zero-height/width polylines (e.g. fraction bar in "EGU/sec")
+        # sit exactly on the boundary between adjacent widgets, so the grid
+        # algorithm merges them into the same row/column.  We carve out a
+        # 1 px slot for the polyline by (a) nudging it back 1 px and
+        # (b) shrinking any neighbour whose edge touches the polyline so
+        # it no longer spans across the polyline's new row/column.
+        #
+        # Collect boundary sets first, then adjust all geometries in one pass.
+        h0_boundaries = set()  # y values of zero-height polylines
+        w0_boundaries = set()  # x values of zero-width polylines
+        for w in widgets:
+            g = w.geometry
+            if w.symbol == "polyline":
+                if g.height == 0 and g.y > 0:
+                    h0_boundaries.add(g.y)
+                elif g.width == 0 and g.x > 0:
+                    w0_boundaries.add(g.x)
+
+        wg_list = []
+        for w in widgets:
+            geom = w.geometry
+            if w.symbol == "polyline" and geom.height == 0 and geom.y in h0_boundaries:
+                # Move polyline up 1 px and give it height 1
+                geom = Geometry(geom.x, geom.y - 1, geom.width, 1)
+            elif w.symbol == "polyline" and geom.width == 0 and geom.x in w0_boundaries:
+                geom = Geometry(geom.x - 1, geom.y, 1, geom.height)
+            else:
+                # Shrink neighbours whose bottom/right edge touches a polyline boundary
+                y, h = geom.y, geom.height
+                for boundary in h0_boundaries:
+                    if y + h == boundary and h > 1:
+                        h -= 1
+                x, wd = geom.x, geom.width
+                for boundary in w0_boundaries:
+                    if x + wd == boundary and wd > 1:
+                        wd -= 1
+                if h != geom.height or wd != geom.width:
+                    geom = Geometry(x, y, wd, h)
+
+            wg_list.append((w, geom))
+
+        # "visual=invisible" related displays overlay another widget in MEDM.
+        # Find the overlapping widget and place the button just to its right.
+        for i, (w, geom) in enumerate(wg_list):
+            if (w.symbol == "related display"
+                    and w.contents.get("visual") == "invisible"):
+                icon_size = min(geom.height, 18)
+                # Find the widget at the same position (the one being overlaid)
+                right_edge = geom.x + geom.width
+                for other_w, other_g in wg_list:
+                    if other_w is w:
+                        continue
+                    if (abs(other_g.x - geom.x) < 5
+                            and abs(other_g.y - geom.y) < 5):
+                        right_edge = max(right_edge, other_g.x + other_g.width)
+                wg_list[i] = (w, Geometry(
+                    right_edge, geom.y, icon_size, geom.height,
+                ))
+
+        grid = compute_grid_placement(wg_list, container_w, container_h)
 
         layout_name = self.get_unique_widget_name("gridLayout")
         layout = self.writer.writeOpenTag(
@@ -264,11 +321,63 @@ class Widget2Pydm(object):
         self.writer.writeTaggedString(sp, "horstretch", "0")
         self.writer.writeTaggedString(sp, "verstretch", "0")
 
+    def _is_fraction_composite(self, block):
+        """Detect composite with text/polyline/text forming a fraction bar (e.g. EGU/sec)."""
+        if block.symbol != "composite" or len(block.widgets) != 3:
+            return None
+        texts = [w for w in block.widgets if w.symbol == "text"]
+        polys = [w for w in block.widgets if w.symbol == "polyline"]
+        if len(texts) != 2 or len(polys) != 1:
+            return None
+        if polys[0].geometry.height != 0:
+            return None
+        texts.sort(key=lambda t: t.geometry.y)
+        top = texts[0].title or ""
+        bot = texts[1].title or ""
+        if not top or not bot:
+            return None
+        return texts[0], top, bot
+
     def write_block(self, parent, block):
         nm = self.get_unique_widget_name(block.symbol.replace(" ", "_"))
 
+        # Fraction-bar composite (e.g. EGU/sec): replace with a single QLabel
+        fraction = self._is_fraction_composite(block)
+        if fraction is not None:
+            top_widget, top_text, bot_text = fraction
+            cls = "QLabel"
+            qw = self.writer.writeOpenTag(parent, "widget", cls=cls, name=nm)
+            text = convertMacros(f"{top_text}/{bot_text}")
+            self.write_geometry(qw, block.geometry)
+            if self.use_layout:
+                self._write_size_policy(qw)
+            # Set minimum size so the fraction text is not clipped
+            font_h = top_widget.geometry.height
+            pt = int(max(6, min(20, font_h * 0.6)))
+            min_w = len(text) * pt
+            propty = self.writer.writeOpenProperty(qw, "minimumSize")
+            sz = self.writer.writeOpenTag(propty, "size")
+            self.writer.writeTaggedString(sz, "width", str(min_w))
+            self.writer.writeTaggedString(sz, "height", "0")
+            self.writer.writeProperty(qw, "text", text, tag="string")
+            self.write_font_size(qw, block, height_override=font_h)
+            self.write_basic_attribute(qw, top_widget)
+            self.writePropertyTextAlignment(qw, top_widget.contents)
+            self.write_stylesheet(qw, top_widget)
+            order = len(self.writer.widget_stacking_info)
+            self.writer.widget_stacking_info.append(Qt_zOrder(order=order, vis=1, text=nm))
+            return
+
         if block.symbol == "composite" and len(block.widgets) == 0 and "composite file" in block.contents:
             block.symbol = "embedded display"
+
+        # Convert 2-point straight polylines to PyDMDrawingLine so the line
+        # scales with the widget bounds instead of using fixed pixel points.
+        use_drawing_line = False
+        if block.symbol == "polyline" and hasattr(block, "points") and len(block.points) == 2:
+            p0, p1 = block.points
+            if p0.y == p1.y or p0.x == p1.x:
+                use_drawing_line = True
 
         widget_info = symbols.adl_widgets.get(block.symbol)
         if widget_info is not None:
@@ -279,6 +388,10 @@ class Widget2Pydm(object):
         handler = self.pydm_widget_handlers.get(block.symbol, self.write_block_default)
 
         cls = widget_info["pydm_widget"]
+        if use_drawing_line:
+            cls = "PyDMDrawingLine"
+            if cls not in self.custom_widgets:
+                self.custom_widgets.append(cls)
         if cls == "PyDMLabel":
             c = block.contents
             if not (c.get("monitor") or c.get("control")):
@@ -293,7 +406,15 @@ class Widget2Pydm(object):
         #     _z = 2
         # TODO: PyDMDrawingMMM (Line, Polygon, Oval, ...) need more decisions here
         qw = self.writer.writeOpenTag(parent, "widget", cls=cls, name=nm)
-        self.write_geometry(qw, block.geometry)
+        geom = block.geometry
+        if (block.symbol == "related display"
+                and block.contents.get("visual") == "invisible"):
+            icon_size = min(geom.height, 18)
+            geom = Geometry(
+                geom.x + geom.width - icon_size, geom.y,
+                icon_size, geom.height,
+            )
+        self.write_geometry(qw, geom)
         if self.use_layout:
             self._write_size_policy(qw)
         # self.write_stylesheet(qw, block)
@@ -849,6 +970,21 @@ class Widget2Pydm(object):
         pv = self.get_channel(da)
         if pv is not None:
             self.write_channel(qw, pv)
+
+        # PyDMDrawingLine scales with widget bounds — no points needed.
+        if qw.attrib.get("class") == "PyDMDrawingLine":
+            if penWidth > 0:
+                self.writer.writeProperty(qw, "penWidth", penWidth, tag="double", stdset="0")
+            pen_style = ba.get("style", "solid")
+            pen_styles = {"solid": "Qt::SolidLine", "dash": "Qt::DashLine"}
+            self.writer.writeProperty(
+                qw, "penStyle", pen_styles.get(pen_style, "Qt::SolidLine"), tag="enum", stdset="0"
+            )
+            pen_color_prop = self.writer.writeOpenProperty(qw, "penColor", stdset="0")
+            self.write_color_element(pen_color_prop, block.color)
+            self.writer.writeProperty(qw, "penCapStyle", "Qt::FlatCap", tag="enum", stdset="0")
+            block.color = None
+            return
 
         pt_list = []
         for pt in block.points:
