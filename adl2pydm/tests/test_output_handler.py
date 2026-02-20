@@ -448,7 +448,7 @@ def test_write_widget_oval(tempdir):
                 expected = {
                     "name": "visibility",
                     "property": "Visible",
-                    "channels": [{"channel": "ca://demo:bar_RBV", "trigger": True}],
+                    "channels": [{"channel": "ca://demo:bar_RBV", "trigger": True, "use_enum": False}],
                     "expression": "ch[0]>128",
                 }
                 _core.assertEqualRules(w, expected)
@@ -456,7 +456,7 @@ def test_write_widget_oval(tempdir):
                 expected = {
                     "name": "visibility",
                     "property": "Visible",
-                    "channels": [{"channel": "ca://demo:bar", "trigger": True}],
+                    "channels": [{"channel": "ca://demo:bar", "trigger": True, "use_enum": False}],
                     "expression": "ch[0]==0",
                 }
                 _core.assertEqualRules(w, expected)
@@ -520,7 +520,7 @@ def test_write_widget_polyline_with_rules(tempdir):
     expected = {
         "name": "visibility",
         "property": "Visible",
-        "channels": [{"channel": "ca://PYDM:visible", "trigger": True}],
+        "channels": [{"channel": "ca://PYDM:visible", "trigger": True, "use_enum": False}],
         "expression": "ch[0]!=0",
     }
     _core.assertEqualRules(widget, expected)
@@ -613,7 +613,7 @@ def test_write_widget_rectangle(tempdir):
     expected = {
         "name": "visibility",
         "property": "Visible",
-        "channels": [{"channel": "ca://${P}alldone", "trigger": True}],
+        "channels": [{"channel": "ca://${P}alldone", "trigger": True, "use_enum": False}],
         "expression": "ch[0]==0",
     }
     _core.assertExpectedDictInRef(rules[0], **expected)
@@ -635,8 +635,8 @@ def test_write_widget_rectangle(tempdir):
         "name": "visibility",
         "property": "Visible",
         "channels": [
-            {"channel": "ca://${P}${M}.RBV", "trigger": True},
-            {"channel": "ca://${P}${M}.VAL", "trigger": True},
+            {"channel": "ca://${P}${M}.RBV", "trigger": True, "use_enum": False},
+            {"channel": "ca://${P}${M}.VAL", "trigger": True, "use_enum": False},
         ],
         "expression": "ch[0]==ch[1]",
     }

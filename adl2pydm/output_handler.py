@@ -73,19 +73,27 @@ def convertDynamicAttribute_to_Rules(attr):
     for nm, ref in channel_keys.items():
         if nm in attr:
             pv = convertMacros(attr[nm])
-            channels[ref] = dict(channel=f"ca://{pv}", trigger=len(pv) > 0)
+            channels[ref] = dict(channel=f"ca://{pv}", trigger=len(pv) > 0, use_enum=False)
 
     calc = attr.get("calc")
     if calc is not None and len(calc) > 0:
         logger.info(f"CALC: {calc}")
 
     if len(channels) > 0:
-        visibility_calc = {"if zero": " == 0", "if not zero": " != 0", "calc": calc}[
-            attr.get("vis", "if not zero")
-        ]
+        vis = attr.get("vis", "if not zero")
         rule["channels"] = list(channels.values())
-        if calc is None:
-            calc = "a" + visibility_calc
+        if vis == "calc":
+            # use the calc expression as-is
+            pass
+        elif calc is not None and len(calc) > 0:
+            # calc provided with vis="if zero"/"if not zero":
+            # apply the visibility condition to the calc expression
+            visibility_suffix = {"if zero": " == 0", "if not zero": " != 0"}[vis]
+            calc = f"({calc})" + visibility_suffix
+        else:
+            # no calc, simple channel value check
+            visibility_suffix = {"if zero": " == 0", "if not zero": " != 0"}[vis]
+            calc = "a" + visibility_suffix
 
     rule["expression"] = convertCalcToRuleExpression(calc)
 
