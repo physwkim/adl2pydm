@@ -28,8 +28,15 @@ def compute_grid_placement(widgets_with_geometry, container_width, container_hei
     x_coords = {0, container_width}
     y_coords = {0, container_height}
     for _, geom in widgets_with_geometry:
-        x_coords.update([geom.x, geom.x + geom.width])
-        y_coords.update([geom.y, geom.y + geom.height])
+        # Clamp coordinates to container bounds to prevent phantom widgets
+        # (e.g. deleted MEDM composites at x=-2147483647) from creating
+        # enormous stretch values that collapse the entire grid.
+        x0 = max(0, min(geom.x, container_width))
+        x1 = max(0, min(geom.x + geom.width, container_width))
+        y0 = max(0, min(geom.y, container_height))
+        y1 = max(0, min(geom.y + geom.height, container_height))
+        x_coords.update([x0, x1])
+        y_coords.update([y0, y1])
 
     x_sorted = sorted(x_coords)
     y_sorted = sorted(y_coords)
@@ -38,15 +45,19 @@ def compute_grid_placement(widgets_with_geometry, container_width, container_hei
 
     placements = []
     for ref, geom in widgets_with_geometry:
-        col = x_index[geom.x]
-        row = y_index[geom.y]
+        x0 = max(0, min(geom.x, container_width))
+        y0 = max(0, min(geom.y, container_height))
+        x1 = max(0, min(geom.x + geom.width, container_width))
+        y1 = max(0, min(geom.y + geom.height, container_height))
+        col = x_index[x0]
+        row = y_index[y0]
         placements.append((
             ref,
             GridPlacement(
                 row,
                 col,
-                max(1, y_index[geom.y + geom.height] - row),
-                max(1, x_index[geom.x + geom.width] - col),
+                max(1, y_index[y1] - row),
+                max(1, x_index[x1] - col),
             ),
         ))
 

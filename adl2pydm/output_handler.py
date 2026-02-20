@@ -334,7 +334,7 @@ class Widget2Pydm(object):
             return
         self.processDynamicAttributeAsRules(qw, block)
 
-    def write_font_size(self, qw, block, **kwargs):
+    def write_font_size(self, qw, block, height_override=None, **kwargs):
         """
         Estimate font size from widget geometry height.
 
@@ -342,7 +342,8 @@ class Widget2Pydm(object):
         """
         smallest = 6
         largest = 20
-        pointsize = int(max(smallest, min(largest, block.geometry.height * 0.6)))
+        h = height_override if height_override is not None else block.geometry.height
+        pointsize = int(max(smallest, min(largest, h * 0.6)))
 
         propty = self.writer.writeOpenProperty(qw, "font")
         font = self.writer.writeOpenTag(propty, "font")
@@ -502,7 +503,6 @@ class Widget2Pydm(object):
         pv = self.get_channel(block.contents["control"])
         self.write_tooltip(qw, pv)
         self.write_channel(qw, pv)
-        self.write_font_size(qw, block)
 
         # MEDM stacking: row | column | row column
         # PySide6 PyDMEnumButton declares orientation as Property(int, ...)
@@ -525,11 +525,24 @@ class Widget2Pydm(object):
             )
             stacking = "row"
         orientation = stacking_choices[stacking]
+
+        # Font size: for vertical layout, estimate per-button height.
+        # MEDM choice buttons typically have 2-4 enum items.
+        if stacking == "column":
+            # Horizontal: all buttons share the full widget height
+            self.write_font_size(qw, block)
+        else:
+            # Vertical: divide height by estimated number of buttons
+            h = block.geometry.height
+            est_items = max(2, round(h / 20))
+            per_button_h = h / est_items
+            self.write_font_size(qw, block, height_override=per_button_h)
+
         self.writer.writeProperty(qw, "orientation", orientation, tag="number", stdset="0")
         for k in """
                 horizontalSpacing   verticalSpacing
-                margin_top          margin_bottom
-                margin_left         margin_right
+                marginTop           marginBottom
+                marginLeft          marginRight
                 """.split():
             self.writer.writeProperty(qw, k, 0, tag="number", stdset="0")
 
@@ -538,9 +551,10 @@ class Widget2Pydm(object):
             block,
             margin="0px",
             padding="0px",
-            spacing="0px",
-            # PyDMEnumButton: add color styles for the buttons
-            extra_classes="QPushButton QRadioButton".split(),
+            min_width="0px",
+            min_height="0px",
+            # PyDMEnumButton: propagate styles to internal buttons
+            extra_classes=["QPushButton"],
         )
 
     def writePropertyContentsLabel(self, qw, block, label, tag=None):
@@ -1095,7 +1109,8 @@ class Widget2Pydm(object):
             parts.append(fmt % ("background-color", *block.background_color))
 
         for k, v in kwargs.items():
-            parts.append(f"  {k}: {v};")
+            css_k = k.replace("_", "-")
+            parts.append(f"  {css_k}: {v};")
 
         if len(parts) > 0:
             #
@@ -1104,11 +1119,14 @@ class Widget2Pydm(object):
             ]
             settings += parts
             settings.append("  }")
+            _extra_class_props = {
+                "color:", "background-color:", "margin:", "padding:",
+                "min-width:", "min-height:",
+            }
             for cls in others:
-                # special case
-                # copy color styles to interior widgets
+                # copy color and layout styles to interior widgets
                 settings.append(f"{cls}" + " {")
-                settings += [v for v in parts if v.strip().split()[0] in ("color:", "background-color:")]
+                settings += [v for v in parts if v.strip().split()[0] in _extra_class_props]
                 settings.append("  }")
             style = "\n".join(settings)
 
